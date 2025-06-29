@@ -3,7 +3,7 @@ import tensorflow as tf
 from keras.layers import Input, LSTM, Dense, Dropout, Lambda, Reshape, Permute
 from keras.layers import TimeDistributed, RepeatVector, Conv1D, Activation
 from keras.layers import Embedding, Flatten
-from keras.layers.merge import Concatenate, Add
+from keras.layers import Concatenate, Add
 from keras.models import Model
 import keras.backend as K
 from keras import losses
@@ -50,7 +50,7 @@ def pitch_bins_f(time_steps):
 
 def time_axis(dropout):
     def f(notes, beat, style):
-        time_steps = int(notes.get_shape()[1])
+        time_steps = int(notes.shape[1])
 
         # TODO: Experiment with when to apply conv
         note_octave = TimeDistributed(Conv1D(OCTAVE_UNITS, 2 * OCTAVE, padding='same'))(notes)
@@ -74,7 +74,7 @@ def time_axis(dropout):
         # Apply LSTMs
         for l in range(TIME_AXIS_LAYERS):
             # Integrate style
-            style_proj = Dense(int(x.get_shape()[3]))(style)
+            style_proj = Dense(int(x.shape[3]))(style)
             style_proj = TimeDistributed(RepeatVector(NUM_NOTES))(style_proj)
             style_proj = Activation('tanh')(style_proj)
             style_proj = Dropout(dropout)(style_proj)
@@ -95,7 +95,7 @@ def note_axis(dropout):
     volume_dense = Dense(1, name='volume_dense')
 
     def f(x, chosen, style):
-        time_steps = int(x.get_shape()[1])
+        time_steps = int(x.shape[1])
 
         # Shift target one note to the left.
         shift_chosen = Lambda(lambda x: tf.pad(x[:, :, :-1, :], [[0, 0], [0, 0], [1, 0], [0, 0]]))(chosen)
@@ -108,7 +108,7 @@ def note_axis(dropout):
         for l in range(NOTE_AXIS_LAYERS):
             # Integrate style
             if l not in dense_layer_cache:
-                dense_layer_cache[l] = Dense(int(x.get_shape()[3]))
+                dense_layer_cache[l] = Dense(int(x.shape[3]))
 
             style_proj = dense_layer_cache[l](style)
             style_proj = TimeDistributed(RepeatVector(NUM_NOTES))(style_proj)
